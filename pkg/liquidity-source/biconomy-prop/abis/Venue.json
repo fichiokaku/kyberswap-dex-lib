@@ -1,0 +1,26 @@
+[
+  {
+    "inputs": [],
+    "name": "getPairs",
+    "outputs": [
+      {
+        "components": [
+          {"internalType": "address", "name": "token0", "type": "address"},
+          {"internalType": "address", "name": "token1", "type": "address"}
+        ],
+        "internalType": "struct PropAMMVenue.TokenPair[]",
+        "name": "pairs",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "memberPools",
+    "outputs": [{"internalType": "address[]", "name": "out", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

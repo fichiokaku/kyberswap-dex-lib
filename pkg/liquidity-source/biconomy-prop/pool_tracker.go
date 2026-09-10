@@ -28,7 +28,7 @@ func NewPoolTracker(cfg *Config, ethrpcClient *ethrpc.Client) (*PoolTracker, err
 	return &PoolTracker{config: cfg, ethrpcClient: ethrpcClient}, nil
 }
 
-// rawBoard mirrors PropAMMPool.board()'s return tuple.
+// rawBoard mirrors PropAMMVenue.board()'s return tuple.
 type rawBoard struct {
 	Sizes     []*big.Int
 	Prices    []*big.Int
@@ -39,9 +39,9 @@ type rawBoard struct {
 }
 
 // GetNewPoolState refreshes the pair's full multi-maker state: the venue's
-// member registry, then every member's board() for BOTH directions of this
-// pair, pinned to the member-list call's resolved block so the merged view
-// is internally consistent. board() returns the pack-rounded rungs the
+// maker registry, then venue.board(maker, ...) for BOTH directions of this
+// pair, pinned to the registry call's resolved block so the merged view is
+// internally consistent. board() returns the pack-rounded rungs the
 // executor's stored door prices at plus the version's lifetime fill cursor,
 // so the simulator replays onchain deliveries exactly.
 func (t *PoolTracker) GetNewPoolState(
@@ -59,22 +59,21 @@ func (t *PoolTracker) GetNewPoolState(
 		return p, err
 	}
 
-	var memberAddrs []common.Address
-	memberResp, err := t.ethrpcClient.NewRequest().SetContext(ctx).
-		AddCall(&ethrpc.Call{ABI: venueABI, Target: staticExtra.Venue, Method: methodMemberPools}, []any{&memberAddrs}).
+	var makerAddrs []common.Address
+	makersResp, err := t.ethrpcClient.NewRequest().SetContext(ctx).
+		AddCall(&ethrpc.Call{ABI: venueABI, Target: staticExtra.Venue, Method: methodMakers}, []any{&makerAddrs}).
 		Aggregate()
 	if err != nil {
 		return p, err
 	}
 
-	boards := make([]rawBoard, 2*len(memberAddrs))
-	if len(memberAddrs) > 0 {
-		req := t.ethrpcClient.NewRequest().SetContext(ctx).SetBlockNumber(memberResp.BlockNumber)
-		for i, m := range memberAddrs {
-			target := hexutil.Encode(m[:])
-			req.AddCall(&ethrpc.Call{ABI: poolABI, Target: target, Method: methodBoard, Params: []any{token0, token1}},
+	boards := make([]rawBoard, 2*len(makerAddrs))
+	if len(makerAddrs) > 0 {
+		req := t.ethrpcClient.NewRequest().SetContext(ctx).SetBlockNumber(makersResp.BlockNumber)
+		for i, m := range makerAddrs {
+			req.AddCall(&ethrpc.Call{ABI: venueABI, Target: staticExtra.Venue, Method: methodBoard, Params: []any{m, token0, token1}},
 				[]any{&boards[2*i]})
-			req.AddCall(&ethrpc.Call{ABI: poolABI, Target: target, Method: methodBoard, Params: []any{token1, token0}},
+			req.AddCall(&ethrpc.Call{ABI: venueABI, Target: staticExtra.Venue, Method: methodBoard, Params: []any{m, token1, token0}},
 				[]any{&boards[2*i+1]})
 		}
 		if _, err := req.Aggregate(); err != nil {
@@ -82,12 +81,12 @@ func (t *PoolTracker) GetNewPoolState(
 		}
 	}
 
-	members := make([]MemberExtra, len(memberAddrs))
-	for i, m := range memberAddrs {
+	members := make([]MemberExtra, len(makerAddrs))
+	for i, m := range makerAddrs {
 		members[i] = MemberExtra{
-			Pool: hexutil.Encode(m[:]),
-			Dir0: toBoard(boards[2*i]),
-			Dir1: toBoard(boards[2*i+1]),
+			Maker: hexutil.Encode(m[:]),
+			Dir0:  toBoard(boards[2*i]),
+			Dir1:  toBoard(boards[2*i+1]),
 		}
 	}
 
@@ -104,7 +103,7 @@ func (t *PoolTracker) GetNewPoolState(
 
 	p.Extra = string(extra)
 	p.Reserves = entity.PoolReserves{reserve0.Dec(), reserve1.Dec()}
-	p.BlockNumber = memberResp.BlockNumber.Uint64()
+	p.BlockNumber = makersResp.BlockNumber.Uint64()
 	p.Timestamp = time.Now().Unix()
 	return p, nil
 }

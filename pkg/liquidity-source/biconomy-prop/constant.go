@@ -9,13 +9,12 @@ import (
 const (
 	DexType = valueobject.ExchangeBiconomyProp
 
-	methodGetPairs    = "getPairs"
-	methodMemberPools = "memberPools"
-	methodBoard       = "board"
+	methodGetPairs = "getPairs"
+	methodMakers   = "makers"
+	methodBoard    = "board"
 
-	// defaultGas covers the venue's plan walk plus one member fill
-	// (measured member pool.swap: ~114k); each extra member fill adds
-	// roughly one more stored-door execution.
+	// defaultGas covers the venue's plan walk plus one maker fill through the
+	// executor's stored door; each extra maker adds roughly one more fill.
 	defaultGas   = 220_000
 	perMemberGas = 130_000
 )

@@ -11,9 +11,10 @@ type StaticExtra struct {
 }
 
 // Board is one maker's live ladder for ONE direction, exactly as
-// PropAMMPool.board() returns it: pack-rounded cumulative sizes and prices
-// (the executor stores 48-bit mantissa floors; the pool mirrors them), the
-// version's lifetime fill cursor, and the board expiry. Quotes off these
+// PropAMMVenue.board(mm, tokenIn, tokenOut) returns it: pack-rounded
+// cumulative sizes and prices (the executor stores 48-bit mantissa floors;
+// the venue mirrors them), the version's lifetime fill cursor, and the
+// board expiry. Quotes off these
 // values equal stored-door deliveries to the wei.
 type Board struct {
 	Sizes     []*uint256.Int `json:"sizes"`  // cumulative, ascending
@@ -23,12 +24,12 @@ type Board struct {
 	Synced    bool           `json:"synced"`
 }
 
-// MemberExtra is one member pool's state for both directions of this pair.
-// Dir0 quotes token0 -> token1; Dir1 quotes token1 -> token0.
+// MemberExtra is one registered maker's state for both directions of this
+// pair. Dir0 quotes token0 -> token1; Dir1 quotes token1 -> token0.
 type MemberExtra struct {
-	Pool string `json:"pool"`
-	Dir0 Board  `json:"dir0"`
-	Dir1 Board  `json:"dir1"`
+	Maker string `json:"maker"` // the maker's signer address, as registered on the venue
+	Dir0  Board  `json:"dir0"`
+	Dir1  Board  `json:"dir1"`
 }
 
 // Extra is rewritten end-to-end on each tracker refresh. Member order is the

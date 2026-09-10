@@ -7,7 +7,7 @@ import (
 )
 
 // segmentOut sets out = floor(take * price / 1e18), the exact per-segment
-// arithmetic of PropAMMVenue._plan and PropAMMPool._sweep (which itself is
+// arithmetic of PropAMMVenue._plan (which itself is
 // the executor's _sweepLevels). Everything downstream of this floor matches
 // onchain delivery to the wei.
 func segmentOut(out, take, price *uint256.Int) {

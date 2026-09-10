@@ -57,7 +57,7 @@ func twoMakers() []MemberExtra {
 	exp := farExpiry()
 	return []MemberExtra{
 		{
-			Pool: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			Maker: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			Dir0: Board{
 				Sizes:     []*uint256.Int{u("1000000000000000000"), u("3000000000000000000")},
 				Prices:    []*uint256.Int{u("2000000000000000000000"), u("1999000000000000000000")},
@@ -68,7 +68,7 @@ func twoMakers() []MemberExtra {
 			Dir1: Board{Synced: false},
 		},
 		{
-			Pool: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			Maker: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 			Dir0: Board{
 				Sizes:     []*uint256.Int{u("2000000000000000000")},
 				Prices:    []*uint256.Int{u("2000000000000000000000")},
@@ -128,7 +128,7 @@ func TestCalcAmountOut_SplitsAcrossMakersBestPriceFirst(t *testing.T) {
 func TestCalcAmountOut_FloorsPerSegment(t *testing.T) {
 	exp := farExpiry()
 	sim := buildPool(t, []MemberExtra{{
-		Pool: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		Maker: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		Dir0: Board{
 			Sizes:     []*uint256.Int{u("1000000")},
 			Prices:    []*uint256.Int{u("1333333333333333333")},

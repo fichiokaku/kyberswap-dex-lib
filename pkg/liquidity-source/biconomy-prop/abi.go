@@ -6,10 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
-var (
-	venueABI abi.ABI
-	poolABI  abi.ABI
-)
+var venueABI abi.ABI
 
 func init() {
 	builder := []struct {
@@ -17,7 +14,6 @@ func init() {
 		data []byte
 	}{
 		{&venueABI, venueABIJson},
-		{&poolABI, poolABIJson},
 	}
 
 	for _, b := range builder {

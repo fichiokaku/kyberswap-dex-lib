@@ -44,11 +44,6 @@
         "name": "expiresAt",
         "type": "uint256",
         "internalType": "uint256"
-      },
-      {
-        "name": "synced",
-        "type": "bool",
-        "internalType": "bool"
       }
     ],
     "stateMutability": "view"

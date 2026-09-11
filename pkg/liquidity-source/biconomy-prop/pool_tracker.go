@@ -28,22 +28,22 @@ func NewPoolTracker(cfg *Config, ethrpcClient *ethrpc.Client) (*PoolTracker, err
 	return &PoolTracker{config: cfg, ethrpcClient: ethrpcClient}, nil
 }
 
-// rawBoard mirrors PropAMMVenue.board()'s return tuple.
+// rawBoard is PropAMMVenue.board()'s return tuple; the ABI decoder matches
+// each field to the output of the same name.
 type rawBoard struct {
 	Sizes     []*big.Int
 	Prices    []*big.Int
 	Filled    *big.Int
 	Remaining *big.Int
 	ExpiresAt *big.Int
-	Synced    bool
 }
 
 // GetNewPoolState refreshes the pair's full multi-maker state: the venue's
 // maker registry, then venue.board(maker, ...) for BOTH directions of this
 // pair, pinned to the registry call's resolved block so the merged view is
-// internally consistent. board() returns the pack-rounded rungs the
-// executor's stored door prices at plus the version's lifetime fill cursor,
-// so the simulator replays onchain deliveries exactly.
+// internally consistent. board() reads the executor directly and returns
+// the exact levels a fill sweeps at, the consumed meter and the remaining
+// depth, so the simulator replays onchain deliveries exactly.
 func (t *PoolTracker) GetNewPoolState(
 	ctx context.Context,
 	p entity.Pool,
@@ -108,12 +108,15 @@ func (t *PoolTracker) GetNewPoolState(
 	return p, nil
 }
 
+// toBoard converts the decoded board() tuple. A dark board arrives with no
+// levels, zero remaining and zero expiry and converts to a Board that
+// boardLive rejects.
 func toBoard(rb rawBoard) Board {
 	b := Board{
 		Sizes:     make([]*uint256.Int, len(rb.Sizes)),
 		Prices:    make([]*uint256.Int, len(rb.Prices)),
 		Filled:    big256.FromBig(rb.Filled),
-		Synced:    rb.Synced,
+		Remaining: big256.FromBig(rb.Remaining),
 		ExpiresAt: 0,
 	}
 	if rb.ExpiresAt != nil {

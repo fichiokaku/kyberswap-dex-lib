@@ -13,8 +13,8 @@ const (
 	methodMakers   = "makers"
 	methodBoard    = "board"
 
-	// defaultGas covers the venue's plan walk plus one maker fill through the
-	// executor's stored door; each extra maker adds roughly one more fill.
+	// defaultGas covers the venue's merge walk plus one maker fill through
+	// the executor; each extra maker adds roughly one more fill.
 	defaultGas   = 220_000
 	perMemberGas = 130_000
 )

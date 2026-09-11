@@ -14,11 +14,12 @@ import (
 	bignum "github.com/KyberNetwork/kyberswap-dex-lib/pkg/util/bignumber"
 )
 
-// PoolSimulator replays PropAMMVenue's plan math exactly: live marginal
-// segments across every member board, merged price-descending (stable, so
-// equal prices fill in registry order like the venue's insertion sort), then
-// consumed best-first with floor division per segment. The venue's own quote
-// equals the sum of member stored-door deliveries, so this simulator's
+// PoolSimulator replays PropAMMVenue's merge exactly: live marginal
+// segments across every member board, ordered price-descending (stable, so
+// equal prices fill in registry order like the venue's k-way merge), then
+// consumed best-first with floor division per segment, and a maker whose
+// allocation floors to zero output counted as uncovered. The venue's quote is
+// the sum of the per-maker fills the executor performs, so this simulator's
 // output equals onchain delivery to the wei.
 type PoolSimulator struct {
 	pool.Pool
@@ -26,9 +27,10 @@ type PoolSimulator struct {
 	staticExtra StaticExtra
 	members     []MemberExtra
 
-	// cursors[i][d] is member i's lifetime fill cursor for direction d,
-	// advanced by UpdateBalance. Boards themselves are immutable after
-	// construction, so clones share them and deep-copy only the cursors.
+	// cursors[i][d] is member i's consumed meter for direction d, seeded
+	// from Board.Filled and advanced by UpdateBalance. Boards themselves are
+	// immutable after construction, so clones share them and deep-copy only
+	// the cursors.
 	cursors [][2]*uint256.Int
 
 	// now is the construction-time clock used for board expiry, keeping
@@ -88,10 +90,19 @@ type segment struct {
 	price  *uint256.Int
 }
 
-// segments replicates PropAMMVenue._segments for one direction against the
-// CURRENT cursors: every live board's marginal rungs, merged and sorted
-// price-descending. sort.SliceStable matches the contract's insertion sort
-// (strictly-less swaps): equal prices keep member registry order.
+// allocation is one member's planned input and floored output for a swap.
+type allocation struct {
+	in  *uint256.Int
+	out *uint256.Int
+}
+
+// segments lists, for one direction and against the CURRENT cursors, every
+// live board's marginal rungs sorted price-descending. This is the order
+// PropAMMVenue._merge consumes them in: prices never improve with depth
+// inside a board, and the merge takes a maker's rung only on a strictly
+// better price, so sort.SliceStable's tie handling (member registry order)
+// matches the contract. A board the venue reported live can still be
+// exhausted by earlier simulated fills, hence the cursor check.
 func (s *PoolSimulator) segments(dirIndex int) []segment {
 	var segs []segment
 	for i := range s.members {
@@ -146,7 +157,7 @@ func (s *PoolSimulator) CalcAmountOut(params pool.CalcAmountOutParams) (*pool.Ca
 		segOut    uint256.Int
 		take      uint256.Int
 		remaining = amountIn.Clone()
-		allocs    = map[int]*uint256.Int{}
+		allocs    = map[int]*allocation{}
 	)
 	for _, seg := range s.segments(dirIndex) {
 		if remaining.IsZero() {
@@ -159,24 +170,34 @@ func (s *PoolSimulator) CalcAmountOut(params pool.CalcAmountOutParams) (*pool.Ca
 		segmentOut(&segOut, &take, seg.price)
 		out.Add(&out, &segOut)
 		remaining.Sub(remaining, &take)
-		if a, ok := allocs[seg.member]; ok {
-			a.Add(a, &take)
-		} else {
-			allocs[seg.member] = take.Clone()
+		a, ok := allocs[seg.member]
+		if !ok {
+			a = &allocation{in: new(uint256.Int), out: new(uint256.Int)}
+			allocs[seg.member] = a
 		}
+		a.in.Add(a.in, &take)
+		a.out.Add(a.out, &segOut)
 	}
-	// PropAMMVenue.swap reverts Inactive() unless the merged book covers the
-	// full amountIn; there are no partial fills at the venue surface.
+	// PropAMMVenue._merge counts a maker's allocation as coverage only when
+	// its floored output is non-zero: a few wei landing on a maker priced
+	// below 1e18 would deliver nothing, so the venue drops that allocation and
+	// quote/swap revert Inactive() for that exact size. Either way the venue
+	// never partially fills, so the simulator rejects rather than trims.
 	if !remaining.IsZero() {
 		return nil, ErrInsufficientLiquidity
+	}
+	for _, a := range allocs {
+		if a.out.IsZero() {
+			return nil, ErrInsufficientLiquidity
+		}
 	}
 	if out.IsZero() {
 		return nil, ErrZeroAmountOut
 	}
 
 	takes := make([]memberTake, 0, len(allocs))
-	for member, amount := range allocs {
-		takes = append(takes, memberTake{Member: member, AmountIn: amount})
+	for member, a := range allocs {
+		takes = append(takes, memberTake{Member: member, AmountIn: a.in})
 	}
 	sort.Slice(takes, func(a, b int) bool { return takes[a].Member < takes[b].Member })
 
@@ -189,8 +210,8 @@ func (s *PoolSimulator) CalcAmountOut(params pool.CalcAmountOutParams) (*pool.Ca
 	}, nil
 }
 
-// UpdateBalance advances each touched member's lifetime cursor by its
-// allocation, exactly as the onchain fills advance filledByVersion, and
+// UpdateBalance advances each touched member's cursor by its allocation,
+// exactly as the executor's fill advances the board's filled meter, and
 // reduces the delivered token's reserve.
 func (s *PoolSimulator) UpdateBalance(params pool.UpdateBalanceParams) {
 	swapInfo, ok := params.SwapInfo.(SwapInfo)

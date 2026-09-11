@@ -7,7 +7,7 @@ type Config struct {
 	ChainID valueobject.ChainID `json:"chainId"`
 	// Venue is the PropAMMVenue: the single onchain entrypoint that merges
 	// every registered maker board and splits fills across them internally.
-	// The canonical deployment is 0x000000a22FAC0B743934423f1A6073147b246Edb
+	// The canonical deployment is 0x000000445Dff11123a3BD8A4Dd03a351829aF892
 	// on every supported chain.
 	Venue string `json:"venue"`
 }

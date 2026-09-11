@@ -7,10 +7,7 @@ type Config struct {
 	ChainID valueobject.ChainID `json:"chainId"`
 	// Venue is the PropAMMVenue: the single onchain entrypoint that merges
 	// every registered maker board and splits fills across them internally.
-	//
-	// TODO: the venue and the executor behind it are being redeployed with
-	// the new board() read surface (no synced flag). The address configured
-	// here must be updated to the new PropAMMVenue deployment; the previous
-	// deployment does not match this package's ABI.
+	// The canonical deployment is 0x000000a22FAC0B743934423f1A6073147b246Edb
+	// on every supported chain.
 	Venue string `json:"venue"`
 }

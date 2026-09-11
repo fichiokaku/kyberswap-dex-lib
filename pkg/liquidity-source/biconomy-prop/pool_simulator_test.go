@@ -15,9 +15,7 @@ import (
 )
 
 const (
-	// TODO: testVenue is the previous PropAMMVenue deployment on Base. It is
-	// only a label in these tests (nothing is fetched), but it must be
-	// updated to the new deployment's address once it is live.
+	// The canonical PropAMMVenue address; a label in these tests, nothing is fetched.
 	testVenue  = "0x000000a22FAC0B743934423f1A6073147b246Edb"
 	testToken0 = "0x4200000000000000000000000000000000000006"
 	testToken1 = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
